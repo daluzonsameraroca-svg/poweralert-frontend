@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 const API = "https://psgc.cloud/api";
 
-export default function LocationSelector({ form, setForm }) {
+export default function LocationSelector({ form = {}, setForm }) {
   const [regions, setRegions] = useState([]);
   const [provinces, setProvinces] = useState([]);
   const [municipalities, setMunicipalities] = useState([]);
@@ -11,16 +11,22 @@ export default function LocationSelector({ form, setForm }) {
   useEffect(() => {
     fetch(`${API}/regions`)
       .then((res) => res.json())
-      .then(setRegions);
+      .then((data) => setRegions(Array.isArray(data) ? data : []))
+      .catch(() => setRegions([]));
   }, []);
 
   function updateForm(data) {
-    setForm((prev) => ({ ...prev, ...data }));
+    if (!setForm) return;
+
+    setForm((prev) => ({
+      ...(prev || {}),
+      ...data,
+    }));
   }
 
   async function handleRegion(e) {
     const code = e.target.value;
-    const selected = regions.find((r) => r.code === code);
+    const selected = regions.find((item) => item.code === code);
 
     updateForm({
       region: selected?.name || "",
@@ -33,15 +39,24 @@ export default function LocationSelector({ form, setForm }) {
       barangay_code: "",
     });
 
-    const res = await fetch(`${API}/regions/${code}/provinces`);
-    setProvinces(await res.json());
+    setProvinces([]);
     setMunicipalities([]);
     setBarangays([]);
+
+    if (!code) return;
+
+    try {
+      const res = await fetch(`${API}/regions/${code}/provinces`);
+      const data = await res.json();
+      setProvinces(Array.isArray(data) ? data : []);
+    } catch {
+      setProvinces([]);
+    }
   }
 
   async function handleProvince(e) {
     const code = e.target.value;
-    const selected = provinces.find((p) => p.code === code);
+    const selected = provinces.find((item) => item.code === code);
 
     updateForm({
       province: selected?.name || "",
@@ -52,14 +67,23 @@ export default function LocationSelector({ form, setForm }) {
       barangay_code: "",
     });
 
-    const res = await fetch(`${API}/provinces/${code}/cities-municipalities`);
-    setMunicipalities(await res.json());
+    setMunicipalities([]);
     setBarangays([]);
+
+    if (!code) return;
+
+    try {
+      const res = await fetch(`${API}/provinces/${code}/cities-municipalities`);
+      const data = await res.json();
+      setMunicipalities(Array.isArray(data) ? data : []);
+    } catch {
+      setMunicipalities([]);
+    }
   }
 
   async function handleMunicipality(e) {
     const code = e.target.value;
-    const selected = municipalities.find((m) => m.code === code);
+    const selected = municipalities.find((item) => item.code === code);
 
     updateForm({
       municipality: selected?.name || "",
@@ -68,13 +92,22 @@ export default function LocationSelector({ form, setForm }) {
       barangay_code: "",
     });
 
-    const res = await fetch(`${API}/cities-municipalities/${code}/barangays`);
-    setBarangays(await res.json());
+    setBarangays([]);
+
+    if (!code) return;
+
+    try {
+      const res = await fetch(`${API}/cities-municipalities/${code}/barangays`);
+      const data = await res.json();
+      setBarangays(Array.isArray(data) ? data : []);
+    } catch {
+      setBarangays([]);
+    }
   }
 
   function handleBarangay(e) {
     const code = e.target.value;
-    const selected = barangays.find((b) => b.code === code);
+    const selected = barangays.find((item) => item.code === code);
 
     updateForm({
       barangay: selected?.name || "",
@@ -86,29 +119,52 @@ export default function LocationSelector({ form, setForm }) {
     <div className="form-grid">
       <select value={form.region_code || ""} onChange={handleRegion} required>
         <option value="">Select Region</option>
-        {regions.map((r) => (
-          <option key={r.code} value={r.code}>{r.name}</option>
+        {regions.map((region) => (
+          <option key={region.code} value={region.code}>
+            {region.name}
+          </option>
         ))}
       </select>
 
-      <select value={form.province_code || ""} onChange={handleProvince} disabled={!form.region_code} required>
+      <select
+        value={form.province_code || ""}
+        onChange={handleProvince}
+        disabled={!form.region_code}
+        required
+      >
         <option value="">Select Province</option>
-        {provinces.map((p) => (
-          <option key={p.code} value={p.code}>{p.name}</option>
+        {provinces.map((province) => (
+          <option key={province.code} value={province.code}>
+            {province.name}
+          </option>
         ))}
       </select>
 
-      <select value={form.municipality_code || ""} onChange={handleMunicipality} disabled={!form.province_code} required>
+      <select
+        value={form.municipality_code || ""}
+        onChange={handleMunicipality}
+        disabled={!form.province_code}
+        required
+      >
         <option value="">Select City / Municipality</option>
-        {municipalities.map((m) => (
-          <option key={m.code} value={m.code}>{m.name}</option>
+        {municipalities.map((municipality) => (
+          <option key={municipality.code} value={municipality.code}>
+            {municipality.name}
+          </option>
         ))}
       </select>
 
-      <select value={form.barangay_code || ""} onChange={handleBarangay} disabled={!form.municipality_code} required>
+      <select
+        value={form.barangay_code || ""}
+        onChange={handleBarangay}
+        disabled={!form.municipality_code}
+        required
+      >
         <option value="">Select Barangay</option>
-        {barangays.map((b) => (
-          <option key={b.code} value={b.code}>{b.name}</option>
+        {barangays.map((barangay) => (
+          <option key={barangay.code} value={barangay.code}>
+            {barangay.name}
+          </option>
         ))}
       </select>
     </div>
